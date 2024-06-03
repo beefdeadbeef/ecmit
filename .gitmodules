@@ -7,3 +7,6 @@
 [submodule "rtt"]
 	path = rtt
 	url = https://github.com/SEGGERMicro/RTT.git
+[submodule "bugurtos"]
+	path = bgrt
+	url = https://github.com/beefdeadbeef/bugurtos.git
