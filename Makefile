@@ -2,7 +2,7 @@
 OPENCM3_DIR	= libopencm3
 DEVICE		= at32f403acgu
 BINARY		= fw
-OBJS		=
+OBJS		= ecm.o main.o
 
 CFLAGS		+= -pipe -g -Os -flto
 CFLAGS		+= -Wall -Wextra -Wshadow
