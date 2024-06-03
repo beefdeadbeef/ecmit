@@ -1,0 +1,6 @@
+/generated.*.ld
+*.[aod]
+*.elf
+*.bin
+fw
+*~

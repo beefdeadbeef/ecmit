@@ -1,15 +1,20 @@
 [submodule "libopencm3"]
 	path = libopencm3
 	url = https://github.com/beefdeadbeef/libopencm3.git
+	ignore = dirty
 [submodule "printf"]
 	path = printf
 	url = https://github.com/mpaland/printf.git
+	ignore = dirty
 [submodule "rtt"]
 	path = rtt
 	url = https://github.com/SEGGERMicro/RTT.git
+	ignore = dirty
 [submodule "bugurtos"]
 	path = bgrt
 	url = https://github.com/beefdeadbeef/bugurtos.git
+	ignore = dirty
 [submodule "lwip"]
 	path = lwip
 	url = https://github.com/lwip-tcpip/lwip.git
+	ignore = dirty
