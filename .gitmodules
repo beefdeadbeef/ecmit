@@ -10,3 +10,6 @@
 [submodule "bugurtos"]
 	path = bgrt
 	url = https://github.com/beefdeadbeef/bugurtos.git
+[submodule "lwip"]
+	path = lwip
+	url = https://github.com/lwip-tcpip/lwip.git
