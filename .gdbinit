@@ -8,9 +8,9 @@ target extended-remote /dev/ttygdb
 monitor swdp_scan
 attach 1
 
-enableSTM32SWO
+enableSTM32SWO 4
 monitor traceswo 2250000
-prepareSWO 244000000 2250000
+prepareSWO 168000000 2250000
 
 dwtSamplePC 1
 dwtSyncTap 3

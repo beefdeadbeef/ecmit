@@ -16,16 +16,16 @@
 
 #include "common.h"
 
-#define __usb_isr usb_lp_isr
-#define __usb_irq NVIC_USB_LP_IRQ
-#define __usb_driver st_usbfs_v1_usb_driver
+#define __usb_isr otg_fs_isr
+#define __usb_irq NVIC_OTG_FS_IRQ
+#define __usb_driver otgfs_usb_driver
 
-#define PKTSIZE0 16
-#define MIN_PACKET_SIZE 32
+#define PKTSIZE0 64
+#define MIN_PACKET_SIZE 64
 #define ECM_PACKET_SIZE 64
-#define ECM_OUT_ENDP_ADDR 0x03
-#define ECM_IN_ENDP_ADDR 0x84
-#define ECM_CTRL_ENDP_ADDR 0x85
+#define ECM_OUT_ENDP_ADDR 0x02
+#define ECM_IN_ENDP_ADDR 0x82
+#define ECM_CTRL_ENDP_ADDR 0x83
 
 #define ECM_SEGSZ 1514		/* MTU 1500 */
 
