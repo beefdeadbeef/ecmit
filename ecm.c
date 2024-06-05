@@ -7,11 +7,12 @@
 #include <libopencm3/usb/usbd.h>
 
 #include <lwip/debug.h>
+#include <lwip/dhcp.h>
 #include <lwip/err.h>
 #include <lwip/netif.h>
+#include <lwip/netifapi.h>
 #include <lwip/pbuf.h>
 #include <lwip/tcpip.h>
-#include <netif/etharp.h>
 
 #include "common.h"
 
@@ -281,8 +282,10 @@ static void ecm_altset_cb(usbd_device *usbd_dev,
 
 	if (wValue) {				/* wValue: alt setting # */
 		bgrt_atm_bset(&ev, TX_RDY);
+		netifapi_netif_set_link_up(&ecmif);
 	} else {
 		bgrt_atm_bclr(&ev, TX_RDY);
+		netifapi_netif_set_link_down(&ecmif);
 	}
 }
 
@@ -396,7 +399,7 @@ loop:	p = pbuf_alloc(PBUF_RAW, ECM_PACKET_SIZE, PBUF_RAM);
 	if (p->len == ECM_PACKET_SIZE)
 		goto loop;
 
-	p = pp;
+	p = pbuf_coalesce(pp, PBUF_RAW);
 	pp = NULL;
 
 	if (iface->input(p, iface) != ERR_OK) {
@@ -437,14 +440,14 @@ static err_t ecm_output(struct netif *iface, struct pbuf *p)
 #if LWIP_NETIF_STATUS_CALLBACK
 static void ecm_status_cb(struct netif *iface)
 {
-	LWIP_DEBUGF(ECM_DEBUG, ("%s\n", ip4addr_ntoa(netif_ip4_addr(iface))));
+	LWIP_DEBUGF(ECM_DEBUG, ("address: %s\n", ip4addr_ntoa(netif_ip4_addr(iface))));
 }
 #endif
 
 #if LWIP_NETIF_LINK_CALLBACK
 static void ecm_link_cb(struct netif *iface)
 {
-	LWIP_DEBUGF(ECM_DEBUG, ("%s\n", netif_is_link_up(iface) ? "up" : "down"));
+	LWIP_DEBUGF(ECM_DEBUG, ("iface is %s\n", netif_is_link_up(iface) ? "up" : "down"));
 }
 #endif
 
@@ -492,14 +495,9 @@ static err_t ecmif_init(struct netif *iface)
 
 void ecm_init(void *arg)
 {
-	ip4_addr_t ip, nm, gw;
 	(void)arg;
 
-	IP4_ADDR(&gw, 172,22,22,129);
-	IP4_ADDR(&ip, 172,22,22,158);
-	IP4_ADDR(&nm, 255,255,255,224);
-
-	netif_add(&ecmif, &ip, &nm, &gw, &ecmstate, ecmif_init, tcpip_input);
+	netif_add(&ecmif, NULL, NULL, NULL, &ecmstate, ecmif_init, tcpip_input);
 	netif_set_default(&ecmif);
 	netif_set_up(&ecmif);
 
@@ -509,4 +507,5 @@ void ecm_init(void *arg)
 #if LWIP_NETIF_LINK_CALLBACK
 	netif_set_link_callback(&ecmif, ecm_link_cb);
 #endif
+	dhcp_start(&ecmif);
 }

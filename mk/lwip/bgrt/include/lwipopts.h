@@ -14,6 +14,10 @@
 
 #define LWIP_SINGLE_NETIF       1
 #define LWIP_ARP                1
+#define LWIP_DHCP               1
+
+#define LWIP_NETIF_LINK_CALLBACK	1
+#define LWIP_NETIF_STATUS_CALLBACK	1
 /*
  */
 #define MEM_ALIGNMENT           4
