@@ -94,7 +94,7 @@ void sys_mutex_unlock(sys_mutex_t *mutex)
 	LWIP_ASSERT("mutex != NULL", mutex != NULL);
 	LWIP_ASSERT("mutex->mtx != NULL", mutex->mtx != NULL);
 	st = bgrt_mtx_free(mutex->mtx);
-	LWIP_ASSERT("st == BGRT_ST_OK", st == BGRT_ST_OK || st == BGRT_ST_EEMPTY);
+	LWIP_ASSERT("st == BGRT_ST_OK", st == BGRT_ST_OK);
 }
 
 void sys_mutex_free(sys_mutex_t *mutex)
