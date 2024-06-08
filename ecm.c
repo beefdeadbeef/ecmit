@@ -195,7 +195,7 @@ static usbd_device * usbdev;
 static uint8_t usbd_control_buffer[64];
 static bgrt_vint_t usbd_vint;
 
-enum { TX_REQ = (1 << 0), TX_RDY = (1 << 1), RX_OVF = (1 << 2) };
+enum { TX_REQ = (1 << 0), TX_RDY = (1 << 1), EV_LNK = (1 << 2) };
 static bgrt_map_t ev;
 
 static struct netif ecmif = {
@@ -282,11 +282,11 @@ static void ecm_altset_cb(usbd_device *usbd_dev,
 
 	if (wValue) {				/* wValue: alt setting # */
 		bgrt_atm_bset(&ev, TX_RDY);
-		netifapi_netif_set_link_up(&ecmif);
 	} else {
 		bgrt_atm_bclr(&ev, TX_RDY);
-		netifapi_netif_set_link_down(&ecmif);
 	}
+
+	bgrt_atm_bset(&ev, EV_LNK);
 }
 
 static enum usbd_request_return_codes ecm_cs_cb(
@@ -385,7 +385,15 @@ static void ecm_input(void *ctx)
 	struct pbuf *p, *pp = NULL;
 	bgrt_st_t st;
 
-loop:	p = pbuf_alloc(PBUF_RAW, ECM_PACKET_SIZE, PBUF_RAM);
+loop:	if (bgrt_atm_bget(&ev, EV_LNK)) {
+		bgrt_atm_bclr(&ev, EV_LNK);
+		if (bgrt_atm_bget(&ev, TX_RDY))
+			netifapi_netif_set_link_up(&ecmif);
+		else
+			netifapi_netif_set_link_down(&ecmif);
+	}
+
+	p = pbuf_alloc(PBUF_RAW, ECM_PACKET_SIZE, PBUF_RAM);
 	LWIP_ASSERT("p != NULL", p);
 
 	st = bgrt_queue_swap(q, (void **)&p);
