@@ -24,25 +24,9 @@ LWIP_MEMPOOL_DECLARE(bgrt_sync, BGRT_SYNC_NR, BGRT_SYNC_SZ, "BGRT_SYNC");
 LWIP_MEMPOOL_DECLARE(bgrt_queue, BGRT_QUEUE_NR, BGRT_QUEUE_SZ, "BGRT_QUEUE");
 LWIP_MEMPOOL_DECLARE(bgrt_proc, BGRT_PROC_NR, BGRT_PROC_SZ, "BGRT_PROC");
 
-#define BGRT_PROC_STACK_TOP(x) ((bgrt_stack_t *)((void *)x + BGRT_PROC_SZ) - 1)
-
 /*
  *
  */
-static sys_thread_t lwip_tcpip_thread;
-
-void sys_mark_tcpip_thread(void)
-{
-	lwip_tcpip_thread.proc = bgrt_curr_proc();
-}
-
-void sys_check_core_locking(void)
-{
-	LWIP_ASSERT("Function called from wrong thread",
-		    !lwip_tcpip_thread.proc ||
-		    bgrt_curr_proc() == lwip_tcpip_thread.proc);
-}
-
 void sys_init(void)
 {
 	LWIP_MEMPOOL_INIT(bgrt_sync);

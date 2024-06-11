@@ -4,8 +4,6 @@
 #include <bugurt.h>
 #include <native.h>
 
-#include "queue.h"
-
 /*
  * critsec
  */

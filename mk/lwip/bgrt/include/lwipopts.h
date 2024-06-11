@@ -5,8 +5,7 @@
 #define LWIPOPTS_H
 
 #define NO_SYS				0
-#define LWIP_TCPIP_CORE_LOCKING		1
-#define LWIP_TCPIP_CORE_LOCKING_INPUT	1
+#define LWIP_TCPIP_CORE_LOCKING		0
 
 #define LWIP_SOCKET             !NO_SYS
 #define LWIP_NETCONN            !NO_SYS
