@@ -2,7 +2,7 @@
  */
 
 #include <libopencm3/cm3/nvic.h>
-#include <libopencm3/usb/audio.h>
+#include <libopencm3/stm32/desig.h>
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/usb/usbd.h>
 
@@ -36,11 +36,8 @@
 LWIP_MEMPOOL_PROTOTYPE(bgrt_sync);
 LWIP_MEMPOOL_PROTOTYPE(bgrt_queue);
 
-static const char * const usb_strings[] = {
-	"Acme Corp",
-	"ECMIT",
-	"3A861A22AC7D"
-};
+static char mac[2 * NETIF_MAX_HWADDR_LEN + 1];
+static const char * usb_strings[] = { "Acme Corp", "ECMIT", mac };
 
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
@@ -200,8 +197,7 @@ static bgrt_map_t ev;
 
 static struct netif ecmif = {
 	.name = { 'e', 'n' },
-	.hwaddr = { 0x3e, 0x53, 0x12, 0xe6, 0x50, 0x75 },
-	.hwaddr_len = 6
+	.hwaddr_len = NETIF_MAX_HWADDR_LEN
 };
 
 static struct ifstate {
@@ -220,6 +216,43 @@ typedef struct {
 } ecm_sg_t;
 
 static ecm_sg_t sgbuf[IF_Q_SZ + 1];
+
+/*
+ *
+ */
+static void  __attribute__((constructor)) uid_to_macs()
+{
+	uint8_t uid[12];
+	char *p;
+	int i;
+
+	desig_get_unique_id((uint32_t *)&uid);
+
+	/* LAA bit */
+	uid[0] |= 2; uid[11] |= 2;
+
+	for (i=0; i<6; i++)
+		ecmif.hwaddr[i] = uid[i];
+
+	for (i=6, p=&mac[11]; i<12; i++) {
+		uint8_t hi = (uid[i] & 0xf0) >> 4;
+		uint8_t lo = uid[i] & 0x0f;
+		*p-- =  lo < 10 ? '0' + lo : 'A' + lo - 10;
+		*p-- =  hi < 10 ? '0' + hi : 'A' + hi - 10;
+	}
+
+	debugf("UID: %08x %08x %08x\n",
+	       *(uint32_t *)&uid[0],
+	       *(uint32_t *)&uid[4],
+	       *(uint32_t *)&uid[8]);
+
+	debugf("MAC0: %02X%02X%02X%02X%02X%02X\n",
+	       ecmif.hwaddr[0], ecmif.hwaddr[1],
+	       ecmif.hwaddr[2], ecmif.hwaddr[3],
+	       ecmif.hwaddr[4], ecmif.hwaddr[5]);
+
+	debugf("MAC1: %s\n", mac);
+}
 
 /*
  * USB ISR context
