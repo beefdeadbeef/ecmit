@@ -407,6 +407,21 @@ BGRT_ISR(__usb_isr)
 /*
  * LWIP context
  */
+static void ecm_link(void *ctx)
+{
+	struct netif *iface = ctx;
+
+loop:	if (bgrt_atm_bclr(&ev, EV_LNK)) {
+		if (bgrt_atm_bget(&ev, TX_RDY))
+			netifapi_netif_set_link_up(iface);
+		else
+			netifapi_netif_set_link_down(iface);
+	}
+	bgrt_wait_time(10);
+
+	goto loop;
+}
+
 static void ecm_input(void *ctx)
 {
 	struct netif *iface = ctx;
@@ -417,18 +432,10 @@ static void ecm_input(void *ctx)
 	bgrt_st_t st;
 	err_t ret;
 
-loop:	if (bgrt_atm_bget(&ev, EV_LNK)) {
-		bgrt_atm_bclr(&ev, EV_LNK);
-		if (bgrt_atm_bget(&ev, TX_RDY))
-			netifapi_netif_set_link_up(&ecmif);
-		else
-			netifapi_netif_set_link_down(&ecmif);
-	}
-
-	total = 0;
-	p = pbuf_alloc(PBUF_RAW, ECM_SEGSZ, PBUF_POOL);
+loop:	p = pbuf_alloc(PBUF_RAW, ECM_SEGSZ, PBUF_POOL);
 	LWIP_ASSERT("p != NULL", p);
 
+	total = 0;
 	do {
 		st = bgrt_queue_swap(q, (void **)&sg);
 		LWIP_ASSERT("st == BGRT_ST_OK", st == BGRT_ST_OK);
@@ -522,6 +529,9 @@ static err_t ecmif_init(struct netif *iface)
 	iface->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP;
 
 	sys_thread_new("ecm_input", ecm_input, iface,
+		       BGRT_PROC_STACK_SIZE, DEFAULT_THREAD_PRIO);
+
+	sys_thread_new("ecm_link", ecm_link, iface,
 		       BGRT_PROC_STACK_SIZE, DEFAULT_THREAD_PRIO);
 
 	return ERR_OK;
