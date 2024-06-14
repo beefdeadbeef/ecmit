@@ -209,13 +209,11 @@ static struct ifstate {
 #define RXQUEUE		(ecmstate.rxqueue)
 #define TXQUEUE		(ecmstate.txqueue)
 
-typedef struct {
+static struct ecm_sg_t {
 	uint16_t flags;
 	uint16_t len;
 	uint8_t payload[ECM_PACKET_SIZE];
-} ecm_sg_t;
-
-static ecm_sg_t sgbuf[IF_Q_SZ + 1];
+} rxbuf[IF_Q_SZ + 1], txbuf[IF_Q_SZ + 1];
 
 /*
  *
@@ -259,7 +257,7 @@ static void  __attribute__((constructor)) uid_to_macs()
  */
 static void ecm_tx_q_cb(void **p, void *msg)
 {
-	ecm_sg_t *q = *p;
+	struct ecm_sg_t *q = *p;
 	(void)msg;
 
 	usbd_ep_write_packet(usbdev, ECM_IN_ENDP_ADDR, q->payload, q->len);
@@ -278,13 +276,11 @@ static void ecm_tx_cb(usbd_device *udev, uint8_t ep)
 
 static void ecm_rx_q_cb(void **p, void *msg)
 {
-	struct pbuf *q = *p;
-	uint16_t len;
+	struct ecm_sg_t *q = *p;
 	(void)msg;
 
-	len = usbd_ep_read_packet(usbdev, ECM_OUT_ENDP_ADDR,
-				  q->payload, ECM_PACKET_SIZE);
-	q->len = q->tot_len = len;
+	q->len = usbd_ep_read_packet(usbdev, ECM_OUT_ENDP_ADDR,
+				     q->payload, ECM_PACKET_SIZE);
 }
 
 static void ecm_rx_cb(usbd_device *udev, uint8_t ep)
@@ -415,8 +411,11 @@ static void ecm_input(void *ctx)
 {
 	struct netif *iface = ctx;
 	bgrt_queue_t *q = ((struct ifstate *)iface->state)->rxqueue;
-	struct pbuf *p, *pp = NULL;
+	struct ecm_sg_t *sg = &rxbuf[IF_Q_SZ];
+	struct pbuf *p;
+	uint16_t total;
 	bgrt_st_t st;
+	err_t ret;
 
 loop:	if (bgrt_atm_bget(&ev, EV_LNK)) {
 		bgrt_atm_bclr(&ev, EV_LNK);
@@ -426,23 +425,19 @@ loop:	if (bgrt_atm_bget(&ev, EV_LNK)) {
 			netifapi_netif_set_link_down(&ecmif);
 	}
 
-	p = pbuf_alloc(PBUF_RAW, ECM_PACKET_SIZE, PBUF_RAM);
+	total = 0;
+	p = pbuf_alloc(PBUF_RAW, ECM_SEGSZ, PBUF_POOL);
 	LWIP_ASSERT("p != NULL", p);
 
-	st = bgrt_queue_swap(q, (void **)&p);
-	LWIP_ASSERT("st == BGRT_ST_OK", st == BGRT_ST_OK);
+	do {
+		st = bgrt_queue_swap(q, (void **)&sg);
+		LWIP_ASSERT("st == BGRT_ST_OK", st == BGRT_ST_OK);
+		ret = pbuf_take_at(p, sg->payload, sg->len, total);
+		LWIP_ASSERT("ret == ERR_OK", ret == ERR_OK);
+		total += sg->len;
+	} while(sg->len == ECM_PACKET_SIZE);
 
-	if (pp)
-		pbuf_cat(pp, p);
-	else
-		pp = p;
-
-	if (p->len == ECM_PACKET_SIZE)
-		goto loop;
-
-	p = pbuf_coalesce(pp, PBUF_RAW);
-	pp = NULL;
-
+	pbuf_realloc(p, total);
 	if (iface->input(p, iface) != ERR_OK) {
 		LWIP_DEBUGF(ECM_DEBUG, ("ecmif.input\n"));
 		pbuf_free(p);
@@ -453,7 +448,7 @@ loop:	if (bgrt_atm_bget(&ev, EV_LNK)) {
 
 static err_t ecm_output(struct netif *iface, struct pbuf *p)
 {
-	static ecm_sg_t *sg = &sgbuf[IF_Q_SZ];
+	static struct ecm_sg_t *sg = &txbuf[IF_Q_SZ];
 	bgrt_queue_t *q = ((struct ifstate *)iface->state)->txqueue;
 	uint16_t len, offset, total;
 	bgrt_st_t st;
@@ -504,12 +499,10 @@ static err_t ecmif_init(struct netif *iface)
 	q->deq = LWIP_MEMPOOL_ALLOC(bgrt_sync);
 	LWIP_ASSERT("rxqueue->sem != NULL", q->deq != NULL);
 	bgrt_queue_init(q, IF_Q_SZ, Q_SW|Q_CS);
-	/* populate rx queue with pbufs */
+	/* populate rx queue with sgbufs */
 	p = q->queue;
-	for (int i=0; i<IF_Q_SZ; i++, p++) {
-		*p = (void *)pbuf_alloc(PBUF_RAW, ECM_PACKET_SIZE, PBUF_RAM);
-		LWIP_ASSERT("pbuf != NULL", *p != NULL);
-	}
+	for (int i=0; i<IF_Q_SZ; i++, p++)
+		*p = &rxbuf[i];
 	ifs->rxqueue = q;
 
 	q = LWIP_MEMPOOL_ALLOC(bgrt_queue);
@@ -520,7 +513,7 @@ static err_t ecmif_init(struct netif *iface)
 	/* populate tx queue with sgbufs */
 	p = q->queue;
 	for (int i=0; i<IF_Q_SZ; i++, p++)
-		*p = &sgbuf[i];
+		*p = &txbuf[i];
 	ifs->txqueue = q;
 
 	iface->linkoutput = ecm_output;
