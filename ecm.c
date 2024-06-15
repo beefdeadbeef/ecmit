@@ -305,7 +305,7 @@ static void ecm_altset_cb(usbd_device *usbd_dev,
 			  uint16_t wIndex, uint16_t wValue)
 {
 	(void) usbd_dev;
-	LWIP_DEBUGF(ECM_DEBUG, ("altset_cb: wIndex: %d wValue: %d\n", wIndex, wValue));
+	debugf("altset_cb: wIndex: %d wValue: %d\n", wIndex, wValue);
 
 	if(wIndex != 1) return;			/* wIndex: iface # */
 
@@ -329,8 +329,8 @@ static enum usbd_request_return_codes ecm_cs_cb(
 	(void) complete;
 	(void) len;
 
-	LWIP_DEBUGF(ECM_DEBUG, ("cs_cb: bRequest: %02x wValue: %04x wIndex: %04x len: %d data=%02x\n",
-				req->bRequest, req->wValue, req->wIndex, *len, *buf[0]));
+	debugf("cs_cb: bRequest: %02x wValue: %04x wIndex: %04x data=%02x\n",
+	       req->bRequest, req->wValue, req->wIndex, *buf[0]);
 	/*
 	 * TODO
 	 * ip li set dev <link> down

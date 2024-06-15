@@ -284,8 +284,7 @@ sys_thread_t sys_thread_new(const char *name,
 	st = bgrt_proc_run(thread.proc);
 	LWIP_ASSERT("st == BGRT_ST_OK", st == BGRT_ST_OK);
 
-	LWIP_DEBUGF(SYS_ARCH_DEBUG, ("thread[%s]=%p fn=%p prio=%d stack=%d\n",
-				     name, thread.proc, pmain, prio, ssize));
-
+	LWIP_DEBUGF(SYS_ARCH_DEBUG, ("[%s] fn=%p proc=%p stack=%d@%p\n",
+				     name, pmain, thread.proc, ssize, stack));
 	return thread;
 }
