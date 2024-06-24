@@ -10,6 +10,8 @@
 #define SYS_ARCH_DEBUG	LWIP_DBG_OFF
 #endif
 
+#define FILLSTACK	(0xdeadbeef)
+
 #define BGRT_SYNC_NR	8
 #define BGRT_SYNC_SZ	(sizeof(bgrt_sync_t) + sizeof(void *))
 
@@ -268,7 +270,10 @@ sys_thread_t sys_thread_new(const char *name,
 
 	stack = mem_malloc(ssize * sizeof(bgrt_stack_t));
 	LWIP_ASSERT("stack != NULL", stack);
-
+#if defined(FILLSTACK)
+	for (bgrt_stack_t *s = stack; s < (stack + ssize); s++)
+		*s = FILLSTACK;
+#endif
 	thread.proc = LWIP_MEMPOOL_ALLOC(bgrt_proc);
 	LWIP_ASSERT("thread.proc != NULL", thread.proc);
 
