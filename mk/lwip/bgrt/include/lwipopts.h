@@ -11,12 +11,12 @@
 #define LWIP_NETCONN            !NO_SYS
 #define LWIP_NETIF_API          !NO_SYS
 
-#define LWIP_SINGLE_NETIF       1
-#define LWIP_ARP                1
-#define LWIP_DHCP               1
+#define LWIP_SINGLE_NETIF		1
+#define LWIP_DHCP			1
+#define DHCP_DOES_ARP_CHECK		0
+#define LWIP_DNS			1
 
-#define LWIP_NETIF_LINK_CALLBACK	1
-#define LWIP_NETIF_STATUS_CALLBACK	1
+#define LWIP_NETIF_EXT_STATUS_CALLBACK	1
 /*
  */
 #define MEM_ALIGNMENT           4
@@ -35,6 +35,7 @@
  */
 #define LWIP_DBG_MIN_LEVEL      LWIP_DBG_LEVEL_ALL
 
+#define APP_DEBUG		LWIP_DBG_ON
 #define ECM_DEBUG		LWIP_DBG_ON
 #define SYS_ARCH_DEBUG		LWIP_DBG_ON
 #define NETIF_DEBUG             LWIP_DBG_OFF

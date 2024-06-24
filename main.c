@@ -10,22 +10,27 @@
 #include <lwip/tcpip.h>
 #include "common.h"
 
+extern void app_init(void *);
 extern void ecm_init(void *);
 extern void usb_init(void);
 
 /*
  *
  */
+static void late_init(void *ctx)
+{
+	ecm_init(ctx);
+	app_init(ctx);
+}
+
 static void idle_cb(void *ctx) { (void)ctx; }
 static unsigned idle_arg;
 
 static void idle(void *ctx)
 {
 	unsigned wake;
-	(void)ctx;
 
-	tcpip_init(ecm_init, NULL);
-	debugf("init done\n");
+	tcpip_init(late_init, &ctx);
 
 loop:	wake = systicks + 500ul;
 sleep:  __asm__ __volatile__ ("wfe":::"memory");

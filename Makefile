@@ -2,11 +2,19 @@
 OPENCM3_DIR	= libopencm3
 DEVICE		= at32f403acgu
 BINARY		= fw
-OBJS		= ecm.o main.o
+OBJS		= app.o ecm.o main.o
 
 CFLAGS		+= -pipe -g -Os -flto
 CFLAGS		+= -Wall -Wextra -Wshadow
 CPPFLAGS	+= -MMD
+
+ifneq ($(HOST),)
+app.o:		CFLAGS += -DHOST=\"$(HOST)\"
+endif
+
+ifneq ($(URI),)
+app.o:		CFLAGS += -DURI=\"$(URI)\"
+endif
 
 include		$(OPENCM3_DIR)/mk/genlink-config.mk
 include		$(OPENCM3_DIR)/mk/gcc-config.mk

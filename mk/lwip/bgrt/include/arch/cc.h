@@ -1,6 +1,8 @@
 #ifndef LWIP_ARCH_CC_H
 #define LWIP_ARCH_CC_H
 
+#include <stdlib.h>
+
 #ifndef LWIP_DEBUG
 
 #define LWIP_NOASSERT	1
@@ -32,5 +34,7 @@ int printf_(const char* format, ...);
 #endif // LWIP_DEBUG
 
 #define LWIP_PROVIDE_ERRNO	1
+
+#define LWIP_RAND()		rand()
 
 #endif // LWIP_ARCH_CC_H
