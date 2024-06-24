@@ -6,8 +6,10 @@ LWIPPORTFILES	= $(LWIPOBJDIR)/bgrt/sys_arch.c
 
 include		$(LWIPDIR)/Filelists.mk
 
-LWIPFILES	= $(LWIPNOAPPSFILES) $(LWIPPORTFILES)
+LWIPFILES	= $(LWIPNOAPPSFILES) $(LWIPPORTFILES) $(HTTPFILES)
 LWIPOBJS	= $(LWIPFILES:.c=.o)
+
+$(HTTPFILES:.c=.o):	CPPFLAGS += -include printf/printf.h
 
 CPPFLAGS	+= -I$(LWIPOBJDIR)/bgrt/include -I$(LWIPDIR)/include
 
