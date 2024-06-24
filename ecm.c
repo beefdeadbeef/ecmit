@@ -541,7 +541,7 @@ void ecm_init(void *arg)
 {
 	(void)arg;
 
-	netif_add(&ecmif, NULL, NULL, NULL, &ecmstate, ecmif_init, tcpip_input);
+	netif_add_noaddr(&ecmif, &ecmstate, ecmif_init, tcpip_input);
 	netif_set_default(&ecmif);
 	netif_set_up(&ecmif);
 
