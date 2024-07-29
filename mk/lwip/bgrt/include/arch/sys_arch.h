@@ -51,4 +51,9 @@ typedef struct {
 	bgrt_proc_t *proc;
 } sys_thread_t;
 
+sys_thread_t
+sys_thread_create(const char *name, void (*fn)(void *),
+		  void *arg, int stacksize, int prio,
+		  unsigned timeslice, bool is_rt);
+
 #endif // LWIP_ARCH_SYS_ARCH_H

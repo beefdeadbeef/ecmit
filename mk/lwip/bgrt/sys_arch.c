@@ -252,11 +252,13 @@ void sys_mbox_free (sys_mbox_t *mbox)
 static void sys_arch_dummy_cb(void *ctx) {(void)ctx;}
 static uint32_t sys_arch_dummy_arg;
 
-sys_thread_t sys_thread_new(const char *name,
-			    lwip_thread_fn pmain,
-			    void *arg,
-			    int ssize,	/* stackwords */
-			    int	prio)
+sys_thread_t sys_thread_create(const char *name,
+			       void (*pmain)(void *),
+			       void *arg,
+			       int ssize,	/* stackwords */
+			       int prio,
+			       unsigned timeslice,
+			       bool is_rt)
 {
 	sys_thread_t thread;
 	bgrt_stack_t *stack;
@@ -278,7 +280,7 @@ sys_thread_t sys_thread_new(const char *name,
 			    &sys_arch_dummy_cb,
 			    arg ? arg : &sys_arch_dummy_arg,
 			    &stack[ssize - 1],
-			    prio, 1, 0);
+			    prio, timeslice, is_rt);
 	LWIP_ASSERT("st == BGRT_ST_OK", st == BGRT_ST_OK);
 
 	st = bgrt_proc_run(thread.proc);
@@ -287,4 +289,10 @@ sys_thread_t sys_thread_new(const char *name,
 	LWIP_DEBUGF(SYS_ARCH_DEBUG, ("[%s] fn=%p proc=%p stack=%d@%p\n",
 				     name, pmain, thread.proc, ssize, stack));
 	return thread;
+}
+
+sys_thread_t sys_thread_new(const char *name, lwip_thread_fn pmain,
+			    void *arg, int ssize, int prio)
+{
+	return sys_thread_create(name, pmain, arg, ssize, prio, 1, 0);
 }
