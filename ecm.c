@@ -19,6 +19,7 @@
 #define __usb_isr usb_lp_isr
 #define __usb_irq NVIC_USB_LP_IRQ
 #define __usb_driver st_usbfs_v1_usb_driver
+#define __usb_irq_prio ((BGRT_CONFIG_CRITSEC_PRIO + 1) <<4)
 
 #define PKTSIZE0 16
 #define MIN_PACKET_SIZE 32
@@ -395,13 +396,14 @@ void usb_init()
 			   usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbdev, usbd_set_config);
 	bgrt_vint_init(&usbd_vint, 1, (bgrt_code_t)usbd_intr, usbdev);
+	nvic_set_priority(__usb_irq, __usb_irq_prio);
 	nvic_enable_irq(__usb_irq);
 }
 
 BGRT_ISR(__usb_isr)
 {
 	nvic_disable_irq(__usb_irq);
-	bgrt_vint_push_isr(&usbd_vint, &bgrt_kernel.kblock.vic);
+	bgrt_vint_push(&usbd_vint, &bgrt_kernel.kblock.vic);
 }
 
 /*
