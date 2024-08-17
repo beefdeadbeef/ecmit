@@ -193,8 +193,7 @@ static usbd_device * usbdev;
 static uint8_t usbd_control_buffer[64];
 static bgrt_vint_t usbd_vint;
 
-enum { TX_REQ = (1 << 0), TX_RDY = (1 << 1), EV_LNK = (1 << 2) };
-static bgrt_map_t ev;
+enum { TX_REQ = (1<<0), TX_RDY = (1<<1), LNK_REQ = (1<<2), LNK_RDY = (1<<3) };
 
 static struct netif ecmif = {
 	.name = { 'e', 'n' },
@@ -204,11 +203,13 @@ static struct netif ecmif = {
 static struct ifstate {
 	bgrt_queue_t *rxqueue;
 	bgrt_queue_t *txqueue;
+	_Atomic(uint32_t) eventmap;
 } ecmstate;
 
 #define IF_Q_SZ		(1<<5)
 #define RXQUEUE		(ecmstate.rxqueue)
 #define TXQUEUE		(ecmstate.txqueue)
+#define EV		(ecmstate.eventmap)
 
 static struct ecm_sg_t {
 	uint16_t flags;
@@ -272,7 +273,7 @@ static void ecm_tx_cb(usbd_device *udev, uint8_t ep)
 
 	st = bgrt_queue_trypost_cb_cs(TXQUEUE, NULL, ecm_tx_q_cb);
 	if (st == BGRT_ST_ROLL)
-		bgrt_atm_bset(&ev, TX_RDY);
+		atomic_fetch_or(&EV, TX_RDY);
 }
 
 static void ecm_rx_q_cb(void **p, void *msg)
@@ -296,10 +297,16 @@ static void ecm_rx_cb(usbd_device *udev, uint8_t ep)
 
 static void ecm_sof_cb(void)
 {
-	if (bgrt_atm_bget(&ev, TX_REQ|TX_RDY) == (TX_REQ|TX_RDY)) {
-		bgrt_atm_bclr(&ev, TX_REQ);
+	uint32_t cur = EV, next, rdy;
+
+	do {
+		rdy = ((cur & (TX_REQ|TX_RDY)) == (TX_REQ|TX_RDY));
+		if (!rdy) break;
+		next = cur & ~(TX_REQ|TX_RDY);
+	} while (!atomic_compare_exchange_strong(&EV, &cur, next));
+
+	if (rdy)
 		ecm_tx_cb(usbdev, ECM_IN_ENDP_ADDR);
-	}
 }
 
 static void ecm_altset_cb(usbd_device *usbd_dev,
@@ -311,12 +318,12 @@ static void ecm_altset_cb(usbd_device *usbd_dev,
 	if(wIndex != 1) return;			/* wIndex: iface # */
 
 	if (wValue) {				/* wValue: alt setting # */
-		bgrt_atm_bset(&ev, TX_RDY);
+		atomic_fetch_or(&EV, TX_RDY|LNK_RDY);
 	} else {
-		bgrt_atm_bclr(&ev, TX_RDY);
+		atomic_fetch_and(&EV, ~(TX_RDY|LNK_RDY));
 	}
 
-	bgrt_atm_bset(&ev, EV_LNK);
+	atomic_fetch_or(&EV, LNK_REQ);
 }
 
 static enum usbd_request_return_codes ecm_cs_cb(
@@ -413,8 +420,8 @@ static void ecm_link(void *ctx)
 {
 	struct netif *iface = ctx;
 
-loop:	if (bgrt_atm_bclr(&ev, EV_LNK)) {
-		if (bgrt_atm_bget(&ev, TX_RDY))
+loop:	if (atomic_fetch_and(&EV, ~LNK_REQ) & LNK_REQ) {
+		if (EV & LNK_RDY)
 			netifapi_netif_set_link_up(iface);
 		else
 			netifapi_netif_set_link_down(iface);
@@ -477,7 +484,7 @@ static err_t ecm_output(struct netif *iface, struct pbuf *p)
 		offset += len;
 	}
 
-	bgrt_atm_bset(&ev, TX_REQ);
+	atomic_fetch_or(&EV, TX_REQ);
 
 	return ERR_OK;
 }
