@@ -3,6 +3,7 @@ OPENCM3_DIR	= libopencm3
 DEVICE		= at32f403acgu
 BINARY		= fw
 OBJS		= ecm.o main.o
+OBJS		+= lwip/contrib/apps/tcpecho/tcpecho.o
 
 CFLAGS		+= -pipe -g -Os -flto
 CFLAGS		+= -Wall -Wextra -Wshadow

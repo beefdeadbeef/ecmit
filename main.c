@@ -12,6 +12,7 @@
 
 extern void ecm_init(void *);
 extern void usb_init(void);
+extern void tcpecho_init(void);
 
 /*
  *
@@ -25,6 +26,7 @@ static void idle(void *ctx)
 	(void)ctx;
 
 	tcpip_init(ecm_init, NULL);
+	tcpecho_init();
 	debugf("init done\n");
 
 loop:	wake = systicks + 500ul;
