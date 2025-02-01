@@ -10,7 +10,7 @@
 #define SYS_ARCH_DEBUG	LWIP_DBG_OFF
 #endif
 
-#define BGRT_SYNC_NR	10
+#define BGRT_SYNC_NR	12
 #define BGRT_SYNC_SZ	(sizeof(bgrt_sync_t) + sizeof(void *))
 
 #define BGRT_QUEUE_NR	6
