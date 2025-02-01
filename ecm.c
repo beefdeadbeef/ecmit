@@ -228,6 +228,11 @@ static void  __attribute__((constructor)) uid_to_macs()
 
 	desig_get_unique_id((uint32_t *)&uid);
 
+	debugf("UID: %08x%08x%08x\n",
+	       *(uint32_t *)&uid[8],
+	       *(uint32_t *)&uid[4],
+	       *(uint32_t *)&uid[0]);
+
 	/* LAA bit */
 	uid[0] |= 2; uid[11] |= 2;
 
@@ -240,11 +245,6 @@ static void  __attribute__((constructor)) uid_to_macs()
 		*p-- =  lo < 10 ? '0' + lo : 'A' + lo - 10;
 		*p-- =  hi < 10 ? '0' + hi : 'A' + hi - 10;
 	}
-
-	debugf("UID: %08x %08x %08x\n",
-	       *(uint32_t *)&uid[0],
-	       *(uint32_t *)&uid[4],
-	       *(uint32_t *)&uid[8]);
 
 	debugf("MAC0: %02X%02X%02X%02X%02X%02X\n",
 	       ecmif.hwaddr[0], ecmif.hwaddr[1],
