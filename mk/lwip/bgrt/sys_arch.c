@@ -10,15 +10,31 @@
 #define SYS_ARCH_DEBUG	LWIP_DBG_OFF
 #endif
 
-#define BGRT_SYNC_NR	10
+#ifndef BGRT_SYNC_NR
+#define BGRT_SYNC_NR	16
+#endif
+
 #define BGRT_SYNC_SZ	(sizeof(bgrt_sync_t) + sizeof(void *))
 
+#ifndef BGRT_QUEUE_NR
 #define BGRT_QUEUE_NR	6
+#endif
+
+#ifndef BGRT_QUEUE_LEN
 #define BGRT_QUEUE_LEN	(1<<5)
+#endif
+
 #define BGRT_QUEUE_SZ	BGRT_Q_SIZEOF(BGRT_QUEUE_LEN)
 
-#define BGRT_PROC_NR	4
+#ifndef BGRT_PROC_NR
+#define BGRT_PROC_NR	6
+#endif
+
 #define BGRT_PROC_SZ	(sizeof(bgrt_proc_t))
+
+#ifndef SYS_THREAD_DEFAULT_TIMESLICE
+#define SYS_THREAD_DEFAULT_TIMESLICE	1
+#endif
 
 LWIP_MEMPOOL_DECLARE(bgrt_sync, BGRT_SYNC_NR, BGRT_SYNC_SZ, "BGRT_SYNC");
 LWIP_MEMPOOL_DECLARE(bgrt_queue, BGRT_QUEUE_NR, BGRT_QUEUE_SZ, "BGRT_QUEUE");
@@ -55,7 +71,7 @@ err_t sys_mutex_new(sys_mutex_t *mutex)
 	mutex->mtx = LWIP_MEMPOOL_ALLOC(bgrt_sync);
 	LWIP_ERROR("mutex->mtx", (mutex->mtx != NULL), return ERR_MEM);
 	bgrt_mtx_init(mutex->mtx, MUTEX_PRIO);
-
+	SYS_STATS_INC_USED(mutex);
 	LWIP_DEBUGF(SYS_ARCH_DEBUG, ("mutex=%p\n", mutex->mtx));
 
 	return ERR_OK;
@@ -86,6 +102,7 @@ void sys_mutex_free(sys_mutex_t *mutex)
 	LWIP_ASSERT("mutex != NULL", mutex != NULL);
 	LWIP_ASSERT("mutex->mtx != NULL", mutex->mtx != NULL);
 	LWIP_MEMPOOL_FREE(bgrt_sync, mutex->mtx);
+	SYS_STATS_DEC(mutex.used);
 
 	mutex->mtx = NULL;
 }
@@ -99,7 +116,7 @@ err_t sys_sem_new(sys_sem_t *sem, u8_t count)
 	sem->sem = LWIP_MEMPOOL_ALLOC(bgrt_sync);
 	LWIP_ERROR("sem->sem", (sem->sem != NULL), return ERR_MEM);
 	bgrt_sem_init(sem->sem, count);
-
+	SYS_STATS_INC_USED(sem);
 	LWIP_DEBUGF(SYS_ARCH_DEBUG, ("sem=%p count=%d\n", sem->sem, count));
 
 	return ERR_OK;
@@ -142,8 +159,8 @@ void sys_sem_free(sys_sem_t *sem)
 {
 	LWIP_ASSERT("sem != NULL", sem != NULL);
 	LWIP_ASSERT("sem->sem != NULL", sem->sem != NULL);
-
 	LWIP_MEMPOOL_FREE(bgrt_sync, sem->sem);
+	SYS_STATS_DEC(sem.used);
 	sem->sem = NULL;
 }
 
@@ -166,6 +183,7 @@ err_t sys_mbox_new(sys_mbox_t *mbox, int size)
 
 	bgrt_queue_init(mbox->queue, size ? size : BGRT_QUEUE_LEN, 0);
 
+	SYS_STATS_INC_USED(mbox);
 	LWIP_DEBUGF(SYS_ARCH_DEBUG, ("mbox=%p size=%d\n", mbox->queue, size));
 
 	return ERR_OK;
@@ -194,6 +212,7 @@ err_t sys_mbox_trypost (sys_mbox_t *mbox, void *msg)
 	st = bgrt_queue_trypost(mbox->queue, msg);
 	if (st == BGRT_ST_OK) return ERR_OK;
 	LWIP_ASSERT("st == BGRT_ST_ROLL", st == BGRT_ST_ROLL);
+	SYS_STATS_INC(mbox.err);
 	return ERR_MEM;
 }
 
@@ -239,10 +258,10 @@ void sys_mbox_free (sys_mbox_t *mbox)
 {
 	LWIP_ASSERT("mbox != NULL", mbox != NULL);
 	LWIP_ASSERT("mbox->queue != NULL", mbox->queue != NULL);
-
 	LWIP_MEMPOOL_FREE(bgrt_sync, mbox->queue->enq.sem);
 	LWIP_MEMPOOL_FREE(bgrt_sync, mbox->queue->deq);
 	LWIP_MEMPOOL_FREE(bgrt_queue, mbox->queue);
+	SYS_STATS_DEC(mbox.used);
 	mbox->queue = NULL;
 }
 
@@ -294,5 +313,16 @@ sys_thread_t sys_thread_create(const char *name,
 sys_thread_t sys_thread_new(const char *name, lwip_thread_fn pmain,
 			    void *arg, int ssize, int prio)
 {
-	return sys_thread_create(name, pmain, arg, ssize, prio, 1, 0);
+	return sys_thread_create(name, pmain, arg, ssize, prio,
+				 SYS_THREAD_DEFAULT_TIMESLICE, 0);
+}
+
+void sys_thread_restart(sys_thread_t thread)
+{
+	bgrt_st_t st;
+
+	LWIP_ASSERT("thread.proc != NULL", thread.proc);
+
+	st = bgrt_proc_restart(thread.proc);
+	LWIP_ASSERT("st == BGRT_ST_OK", st == BGRT_ST_OK);
 }

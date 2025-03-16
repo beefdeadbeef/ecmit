@@ -12,6 +12,11 @@
 #define SYS_ARCH_UNPROTECT(lev)		bgrt_crit_sec_exit()
 
 /*
+ *
+ */
+void sys_arch_msleep(uint32_t delay_ms);
+
+/*
  * Mutexes
  */
 typedef struct {
@@ -55,5 +60,7 @@ sys_thread_t
 sys_thread_create(const char *name, void (*fn)(void *),
 		  void *arg, int stacksize, int prio,
 		  unsigned timeslice, bool is_rt);
+
+void sys_thread_restart(sys_thread_t);
 
 #endif // LWIP_ARCH_SYS_ARCH_H
