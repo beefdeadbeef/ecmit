@@ -455,7 +455,6 @@ loop:	p = pbuf_alloc(PBUF_RAW, ECM_SEGSZ, PBUF_POOL);
 
 	pbuf_realloc(p, total);
 	if (iface->input(p, iface) != ERR_OK) {
-		LWIP_DEBUGF(ECM_DEBUG, ("ecmif.input\n"));
 		pbuf_free(p);
 	}
 
@@ -543,6 +542,9 @@ static err_t ecmif_init(struct netif *iface)
 	sys_thread_new("ecm_link", ecm_link, iface,
 		       BGRT_PROC_STACK_SIZE, DEFAULT_THREAD_PRIO);
 
+	netif_set_up(iface);
+	dhcp_start(iface);
+
 	return ERR_OK;
 }
 
@@ -550,9 +552,8 @@ void ecm_init(void *arg)
 {
 	(void)arg;
 
-	netif_add(&ecmif, NULL, NULL, NULL, &ecmstate, ecmif_init, tcpip_input);
+	netif_add_noaddr(&ecmif, &ecmstate, ecmif_init, tcpip_input);
 	netif_set_default(&ecmif);
-	netif_set_up(&ecmif);
 
 #if LWIP_NETIF_STATUS_CALLBACK
 	netif_set_status_callback(&ecmif, ecm_status_cb);
@@ -560,5 +561,4 @@ void ecm_init(void *arg)
 #if LWIP_NETIF_LINK_CALLBACK
 	netif_set_link_callback(&ecmif, ecm_link_cb);
 #endif
-	dhcp_start(&ecmif);
 }
