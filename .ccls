@@ -11,4 +11,6 @@ clang
 -Ibgrt/libs/native
 -Ilwip/src/include
 -Imk/lwip/bgrt/include
--DAT32F40X
+-DAT32F43X
+-DUSB_OTG_FS_BASE=USB_OTG_FS1_BASE
+-DRCC_OTGFS=RCC_OTGFS1

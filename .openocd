@@ -1,0 +1,25 @@
+#------------------------------------------------ -*- tcl -*-
+gdb breakpoint_override hard
+gdb memory_map enable
+gdb flash_program enable
+gdb port pipe
+log_output /dev/null
+
+source [find interface/atlink_dap_v2.cfg]
+source [find target/artery/at32f4x.cfg]
+
+$_TARGETNAME configure -event gdb-attach {
+    reset halt
+}
+
+$_TARGETNAME configure -event gdb-detach {
+    resume
+}
+
+$_TARGETNAME configure -event reset-start {
+    adapter speed 5000
+}
+
+tpiu config internal :3443 uart off 288000000 2250000
+
+init

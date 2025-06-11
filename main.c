@@ -3,8 +3,8 @@
 #include <alloca.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
-#include <libopencm3/stm32/crs.h>
 #include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/crs.h>
 #include <libopencm3/stm32/rcc.h>
 
 #include <lwip/api.h>
@@ -153,7 +153,7 @@ static void idle(void *ctx)
 loop:	wake = systicks + 500ul;
 sleep:  __asm__ __volatile__ ("wfe":::"memory");
 	if (wake > systicks) goto sleep;
-	gpio_toggle(GPIOC, GPIO13);
+	gpio_toggle(GPIOD, GPIO15);
 	goto loop;
 }
 
@@ -167,35 +167,52 @@ int main()
 
 	bgrt_init();
 
-	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE_240MHZ]);
-	rcc_periph_clock_enable(RCC_AFIO);
+	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE_288MHZ]);
+
+	rcc_set_hsi_div(RCC_CFGR3_HSIDIV_NODIV);        /* HSI48M */
+	rcc_set_hsi_sclk(RCC_CFGR3_HSI_SCLK);           /* HSI48M to SYSCLK */
+	rcc_set_usb_clock_source(RCC_HSI);              /* HSI48M to OTG */
+
+	rcc_set_mco_source(MCO1, RCC_CFGR_MCO1_PLL);
+	rcc_set_mcopre(MCO1, RCC_CFGR_MCOPRE_NODIV);
+	rcc_set_mcodiv(MCO1, RCC_CFGR3_MCO_DIV64);
+
+	rcc_set_mco_source(MCO2, RCC_CFGR_MCO2_MUX);
+	rcc_set_mcopre(MCO2, RCC_CFGR_MCOPRE_NODIV);
+	rcc_set_mcodiv(MCO2, RCC_CFGR3_MCO_DIV8);
+
 	rcc_periph_clock_enable(RCC_CRS);
 	rcc_periph_clock_enable(RCC_GPIOA);
-	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_GPIOC);
-	rcc_set_hsi_div(RCC_CFGR3_HSIDIV_NODIV);
-        rcc_set_hsi_sclk(RCC_CFGR5_HSI_SCLK_HSIDIV);
-        rcc_set_usb_clock_source(RCC_HSI);
-        rcc_periph_clock_enable(RCC_USB);
-        rcc_usb_alt_pma_enable();
-        rcc_usb_alt_isr_enable();
-        crs_autotrim_usb_enable();
+	rcc_periph_clock_enable(RCC_GPIOD);
+	rcc_periph_clock_enable(RCC_GPIOE);
+
+	crs_autotrim_usb_enable();
 
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
 	systick_set_reload(rcc_ahb_frequency / 1000);
 	systick_interrupt_enable();
 	systick_counter_enable();
 
-	gpio_set_mux(AFIO_GMUX_SWJ_NO_JTAG);
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_10_MHZ,
-		      GPIO_CNF_OUTPUT_PUSHPULL,
-		      GPIO0|GPIO1);			/* DEBUG */
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
-		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
-		      GPIO11|GPIO12);                   /* USBFS */
-        gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_2_MHZ,
-		      GPIO_CNF_OUTPUT_PUSHPULL,
-		      GPIO13);				/* PC13 LED */
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,
+                        GPIO8|GPIO11|GPIO12);		/* OTGFS1 */
+	gpio_set_af(GPIOA, GPIO_AF10, GPIO8|GPIO11|GPIO12);
+
+	gpio_mode_setup(GPIOC, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9);
+	gpio_set_af(GPIOE, GPIO_AF0, GPIO9);		/* MCO2 */
+
+	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
+                        GPIO13|GPIO14|GPIO15);          /* PD LEDS */
+	gpio_set_output_options(GPIOD, GPIO_OTYPE_OD, GPIO_OSPEED_LOW,
+				GPIO13|GPIO14|GPIO15);
+
+	gpio_mode_setup(GPIOE, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
+			GPIO0|GPIO1|GPIO2|GPIO3);       /* DEBUG */
+
+	gpio_mode_setup(GPIOE, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO4);
+	gpio_set_af(GPIOE, GPIO_AF0, GPIO4);		/* MCO1 */
+
+	gpio_set(GPIOD, GPIO13|GPIO14|GPIO15);
 
 	usb_init();
 
