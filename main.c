@@ -3,7 +3,6 @@
 #include <alloca.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
-#include <libopencm3/stm32/crs.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/rcc.h>
 
@@ -167,35 +166,21 @@ int main()
 
 	bgrt_init();
 
-	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE_240MHZ]);
-	rcc_periph_clock_enable(RCC_AFIO);
-	rcc_periph_clock_enable(RCC_CRS);
+	rcc_clock_setup_pll(&rcc_hse_25mhz_3v3[RCC_CLOCK_3V3_96MHZ]);
+
 	rcc_periph_clock_enable(RCC_GPIOA);
-	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_GPIOC);
-	rcc_set_hsi_div(RCC_CFGR3_HSIDIV_NODIV);
-        rcc_set_hsi_sclk(RCC_CFGR5_HSI_SCLK_HSIDIV);
-        rcc_set_usb_clock_source(RCC_HSI);
-        rcc_periph_clock_enable(RCC_USB);
-        rcc_usb_alt_pma_enable();
-        rcc_usb_alt_isr_enable();
-        crs_autotrim_usb_enable();
 
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
 	systick_set_reload(rcc_ahb_frequency / 1000);
 	systick_interrupt_enable();
 	systick_counter_enable();
 
-	gpio_set_mux(AFIO_GMUX_SWJ_NO_JTAG);
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_10_MHZ,
-		      GPIO_CNF_OUTPUT_PUSHPULL,
-		      GPIO0|GPIO1);			/* DEBUG */
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
-		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
-		      GPIO11|GPIO12);                   /* USBFS */
-        gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_2_MHZ,
-		      GPIO_CNF_OUTPUT_PUSHPULL,
-		      GPIO13);				/* PC13 LED */
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,
+			GPIO11|GPIO12);			/* OTGFS */
+	gpio_set_af(GPIOA, GPIO_AF10, GPIO11|GPIO12);
+	gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
+			GPIO13);			/* LED */
 
 	usb_init();
 

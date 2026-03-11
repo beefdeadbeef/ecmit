@@ -13,8 +13,8 @@ mon rtt poll 512 16 16
 mon rtt channel 0 1
 mon rtt enable
 
-enableSTM32SWO
-prepareSWO 240000000
+enableSTM32SWO 4
+prepareSWO 96000000
 
 dwtSamplePC 1
 dwtSyncTap 3

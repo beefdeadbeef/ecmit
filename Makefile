@@ -1,6 +1,6 @@
 #------------------------------------------ -*- tab-width: 8 -*-
 OPENCM3_DIR	= libopencm3
-DEVICE		= at32f403acgu
+DEVICE		= stm32f411ce
 BINARY		= fw
 OBJS		= ecm.o main.o
 
@@ -28,7 +28,7 @@ $(BINARY):      $(BINARY).elf
 		$(Q)install -p $< $(BINARY)
 
 lib:
-		$(Q)$(MAKE) -C $(OPENCM3_DIR) lib TARGETS=at32/f40x CFLAGS=-flto AR=$(CC)-ar
+		$(Q)$(MAKE) -C $(OPENCM3_DIR) lib TARGETS=stm32/f4 CFLAGS=-flto AR=$(CC)-ar
 
 include		$(OPENCM3_DIR)/mk/genlink-rules.mk
 include		$(OPENCM3_DIR)/mk/gcc-rules.mk

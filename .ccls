@@ -11,4 +11,4 @@ clang
 -Ibgrt/libs/native
 -Ilwip/src/include
 -Imk/lwip/bgrt/include
--DAT32F40X
+-DSTM32F4
