@@ -13,8 +13,19 @@
 #define LWIP_DHCP		1
 /**/
 #define IP_DEFAULT_TTL		64
-#define LWIP_TCP_RTO_TIME	1000
-#define LWIP_TCP_CLOSE_TIMEOUT_MS_DEFAULT	2000
+/*
+ * TCP_MSS	FD	2xFD	WO	2xWO
+ *     536	2.24	3.51	4.30	6.52
+ *     640	2.50	3.95	5.08	6.70
+ *     720	2.56	--	5.60	6.64
+ *     728
+ *     840	2.64	4.12	6.40	6.82
+ *     920
+ *     984	--	--	6.16	6.81
+ *    1112
+ *    1304
+ */
+#define TCP_MSS			840
 /**/
 #define LWIP_NETIF_LINK_CALLBACK	1
 #define LWIP_NETIF_STATUS_CALLBACK	1
