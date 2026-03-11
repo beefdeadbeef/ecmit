@@ -543,7 +543,6 @@ static err_t ecmif_init(struct netif *iface)
 		       BGRT_PROC_STACK_SIZE, DEFAULT_THREAD_PRIO);
 
 	netif_set_up(iface);
-	dhcp_start(iface);
 
 	return ERR_OK;
 }
@@ -561,4 +560,5 @@ void ecm_init(void *arg)
 #if LWIP_NETIF_LINK_CALLBACK
 	netif_set_link_callback(&ecmif, ecm_link_cb);
 #endif
+	dhcp_start(&ecmif);
 }
