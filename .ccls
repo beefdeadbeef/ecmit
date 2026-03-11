@@ -1,7 +1,6 @@
 clang
 --target=arm-none-eabi
 -mcpu=cortex-m4
--isystem/usr/libexec/gcc/arm-none-eabi/13.2.1/include
 -isystem/usr/libexec/arm-none-eabi/include
 -Ilibopencm3/include
 -Ilibopencm3/tests/shared
@@ -9,7 +8,6 @@ clang
 -Ibgrt/kernel
 -Ibgrt/kernel/default
 -Ibgrt/arch/cm4f/gcc
--Ibgrt/tests/arch/cmi4f/gcc
 -Ibgrt/libs/native
 -Ilwip/src/include
 -Imk/lwip/bgrt/include

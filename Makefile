@@ -4,7 +4,7 @@ DEVICE		= at32f403acgu
 BINARY		= fw
 OBJS		= ecm.o main.o
 
-CFLAGS		+= -pipe -g -Os -flto
+CFLAGS		+= -pipe -g -Os -flto=auto
 CFLAGS		+= -Wall -Wextra -Wshadow
 CPPFLAGS	+= -MMD
 
