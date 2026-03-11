@@ -1,5 +1,5 @@
 #------------------------------------------ -*- tab-width: 8 -*-
-DEVICE		= at32f403acgu
+DEVICE		= stm32f411ce
 BINARY		= fw
 
 OBJS		= main.o ecm.o
