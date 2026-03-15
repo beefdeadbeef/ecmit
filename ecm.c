@@ -189,7 +189,6 @@ static const struct usb_config_descriptor *configs[] = {
 	&config.cdesc
 };
 
-static usbd_device * usbdev;
 static uint8_t usbd_control_buffer[64];
 static bgrt_vint_t usbd_vint;
 
@@ -257,45 +256,43 @@ static void  __attribute__((constructor)) uid_to_macs()
 /*
  * USB ISR context
  */
-static void ecm_tx_q_cb(void **p, void *msg)
+static void ecm_tx_q_cb(void **p, void *arg)
 {
 	struct ecm_sg_t *q = *p;
-	(void)msg;
+	usbd_device *udev = arg;
 
-	usbd_ep_write_packet(usbdev, ECM_IN_ENDP_ADDR, q->payload, q->len);
+	usbd_ep_write_packet(udev, ECM_IN_ENDP_ADDR, q->payload, q->len);
 }
 
 static void ecm_tx_cb(usbd_device *udev, uint8_t ep)
 {
 	(void)ep;
-	(void)udev;
 	bgrt_st_t st;
 
-	st = bgrt_queue_trypost_cb_cs(TXQUEUE, NULL, ecm_tx_q_cb);
+	st = bgrt_queue_trypost_cb_cs(TXQUEUE, udev, ecm_tx_q_cb);
 	if (st == BGRT_ST_ROLL)
 		atomic_fetch_or(&EV, TX_RDY);
 }
 
-static void ecm_rx_q_cb(void **p, void *msg)
+static void ecm_rx_q_cb(void **p, void *arg)
 {
 	struct ecm_sg_t *q = *p;
-	(void)msg;
+	usbd_device *udev = arg;
 
-	q->len = usbd_ep_read_packet(usbdev, ECM_OUT_ENDP_ADDR,
+	q->len = usbd_ep_read_packet(udev, ECM_OUT_ENDP_ADDR,
 				     q->payload, ECM_PACKET_SIZE);
 }
 
 static void ecm_rx_cb(usbd_device *udev, uint8_t ep)
 {
 	(void)ep;
-	(void)udev;
 	bgrt_st_t st;
 
-	st = bgrt_queue_trypost_cb_cs(RXQUEUE, NULL, ecm_rx_q_cb);
+	st = bgrt_queue_trypost_cb_cs(RXQUEUE, udev, ecm_rx_q_cb);
 	LWIP_ASSERT("st == BGRT_ST_OK", st == BGRT_ST_OK);
 }
 
-static void ecm_sof_cb(void)
+static void ecm_sof_cb(usbd_device *udev)
 {
 	uint32_t cur = EV, next, rdy;
 
@@ -306,13 +303,13 @@ static void ecm_sof_cb(void)
 	} while (!atomic_compare_exchange_strong(&EV, &cur, next));
 
 	if (rdy)
-		ecm_tx_cb(usbdev, ECM_IN_ENDP_ADDR);
+		ecm_tx_cb(udev, ECM_IN_ENDP_ADDR);
 }
 
-static void ecm_altset_cb(usbd_device *usbd_dev,
+static void ecm_altset_cb(usbd_device *udev,
 			  uint16_t wIndex, uint16_t wValue)
 {
-	(void) usbd_dev;
+	(void) udev;
 	debugf("altset_cb: wIndex: %d wValue: %d\n", wIndex, wValue);
 
 	if(wIndex != 1) return;			/* wIndex: iface # */
@@ -327,13 +324,13 @@ static void ecm_altset_cb(usbd_device *usbd_dev,
 }
 
 static enum usbd_request_return_codes ecm_cs_cb(
-	usbd_device *usbd_dev,
+	usbd_device *udev,
 	struct usb_setup_data *req,
 	uint8_t **buf,
 	uint16_t *len,
 	usbd_control_complete_callback *complete)
 {
-	(void) usbd_dev;
+	(void) udev;
 	(void) complete;
 	(void) len;
 
@@ -359,34 +356,33 @@ static enum usbd_request_return_codes ecm_cs_cb(
 		return USBD_REQ_NOTSUPP;
 }
 
-static void usbd_set_config(usbd_device *usbd_dev, uint16_t wValue)
+static void usbd_set_config(usbd_device *udev, uint16_t wValue)
 {
 	switch (wValue) {			/* configuration # */
 	case 1:
 		usbd_ep_setup(
-			usbd_dev,
+			udev,
 			ECM_OUT_ENDP_ADDR,
 			USB_ENDPOINT_ATTR_BULK,
 			ECM_PACKET_SIZE,
 			ecm_rx_cb);
 
 		usbd_ep_setup(
-			usbd_dev,
+			udev,
 			ECM_IN_ENDP_ADDR,
 			USB_ENDPOINT_ATTR_BULK,
 			ECM_PACKET_SIZE,
 			ecm_tx_cb);
 
 		usbd_register_control_callback(
-			usbd_dev,
+			udev,
 			USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
 			USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 			ecm_cs_cb);
 
-		usbd_register_set_altsetting_callback(usbd_dev,
-						      ecm_altset_cb);
+		usbd_register_set_altsetting_callback(udev, ecm_altset_cb);
 
-		usbd_register_sof_callback(usbd_dev, ecm_sof_cb);
+		usbd_register_sof_callback(udev, ecm_sof_cb);
 	};
 }
 
@@ -398,11 +394,13 @@ static void usbd_intr(usbd_device *udev)
 
 void usb_init()
 {
-	usbdev = usbd_init(&__usb_driver, &dev, configs,
-			   usb_strings, sizeof(usb_strings)/sizeof(usb_strings[0]),
-			   usbd_control_buffer, sizeof(usbd_control_buffer));
-	usbd_register_set_config_callback(usbdev, usbd_set_config);
-	bgrt_vint_init(&usbd_vint, 1, (bgrt_code_t)usbd_intr, usbdev);
+	static usbd_device * udev;
+
+	udev = usbd_init(&__usb_driver, &dev, configs,
+			 usb_strings, sizeof(usb_strings)/sizeof(usb_strings[0]),
+			 usbd_control_buffer, sizeof(usbd_control_buffer));
+	usbd_register_set_config_callback(udev, usbd_set_config);
+	bgrt_vint_init(&usbd_vint, 1, (bgrt_code_t)usbd_intr, udev);
 	nvic_set_priority(__usb_irq, __usb_irq_prio);
 	nvic_enable_irq(__usb_irq);
 }
