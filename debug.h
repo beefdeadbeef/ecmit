@@ -5,7 +5,7 @@
 
 #include <inttypes.h>
 #include "printf/printf.h"
-#include "trace.h"
+#include "libopencm3/tests/shared/trace.h"
 
 #define trace(port, val)				\
 	do {						\

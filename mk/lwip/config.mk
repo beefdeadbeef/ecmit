@@ -1,19 +1,16 @@
 #------------------------------------------ -*- tab-width: 8 -*-
-LWIPDIR		= lwip/src
-LWIPOBJDIR	= mk/lwip
+LWIPDIR		:= lwip/src
+LWIPPORTDIR	:= mk/lwip
 
-LWIPPORTFILES	= $(LWIPOBJDIR)/bgrt/sys_arch.c
+LWIPPORTFILES	= $(LWIPPORTDIR)/bgrt/sys_arch.c
 
 include		$(LWIPDIR)/Filelists.mk
 
 LWIPFILES	= $(LWIPNOAPPSFILES) $(LWIPPORTFILES)
-LWIPOBJS	= $(LWIPFILES:.c=.o)
 
-CPPFLAGS	+= -I$(LWIPOBJDIR)/bgrt/include -I$(LWIPDIR)/include
+LWIP_OBJS	= $(LWIPFILES:.c=.o)
 
-LWIPLIBNAME	= lwipcommon
-LWIPLIB		= $(LWIPOBJDIR)/lib$(LWIPLIBNAME).a
+LWIP_CPPFLAGS	= -I$(LWIPPORTDIR)/bgrt/include -I$(LWIPDIR)/include
+LWIP_MODFLAGS	= $(LWIP_CPPFLAGS) $(OPENCM3_CPPFLAGS) $(BGRT_CPPFLAGS) $(PRINTF_CPPFLAGS)
 
-LDLIBS		+= -l$(LWIPLIBNAME)
-LIBDEPS		+= $(LWIPLIB)
-LDFLAGS		+= -L$(LWIPOBJDIR)
+$(call add-module,LWIP)

@@ -1,31 +1,34 @@
 #------------------------------------------ -*- tab-width: 8 -*-
-ifeq		($(DEBUG),1)
 
-include		mk/rtt/config.mk
+ifeq		($(DEBUG),)
 
-VPATH		+= $(OPENCM3_DIR)/tests/shared
-VPATH		+= printf
-CPPFLAGS	+= -DDEBUG -DBGRT_DEBUG -DLWIP_DEBUG
-CPPFLAGS	+= -I$(OPENCM3_DIR)/tests/shared
-OBJS		+= trace.o printf.o putchar.o
+CPPFLAGS	+= -DNDEBUG
 
-printf.o:	CPPFLAGS += \
-			-DPRINTF_DISABLE_SUPPORT_FLOAT \
-			-DPRINTF_DISABLE_SUPPORT_EXPONENTIAL \
-			-DPRINTF_DISABLE_SUPPORT_LONG_LONG \
-			-DPRINTF_DISABLE_SUPPORT_PTRDIFF_T
+else
 
-ifeq		($(SEMIHOSTING),1)
-CPPFLAGS	+= -DSEMIHOSTING
-LDFLAGS		+= --specs=rdimon.specs
-LDLIBS		+= -lrdimon
+DEBUG_OBJS	= debug.o
+DEBUG_CPPFLAGS	= -DDEBUG
+DEBUG_MODFLAGS	= $(DEBUG_CPPFLAGS)
+
+ifeq		($(DEBUG),RTT)
+
+DEBUG_MODFLAGS	+= -DRTT
+
+RTTDIR		:= rtt/RTT
+RTT_OBJS	= $(RTTDIR)/SEGGER_RTT.o
+RTT_MODFLAGS	= -I$(RTTDIR) -I$(RTTDIR)/../Config \
+			-DSEGGER_RTT_MAX_NUM_UP_BUFFERS=1 \
+			-DSEGGER_RTT_MAX_NUM_DOWN_BUFFERS=1 \
+			-DSEGGER_RTT_SECTION=\".data.rtt\"
+$(call add-module,RTT)
+
+else
+
+DEBUG_OBJS	+= $(OPENCM3DIR)/tests/shared/trace.o
+DEBUG_MODFLAGS	+= -I$(OPENCM3DIR)/include
+
 endif
 
-ifeq		($(RTT),1)
-CPPFLAGS	+= -DRTT
-LDLIBS		+= -lrtt
-LIBDEPS		+= $(RTTLIB)
-LDFLAGS		+= -L$(RTTOBJDIR) #-Wl,-section-start=.rtt=0x20000000
-endif
+$(call add-module,DEBUG)
 
 endif
