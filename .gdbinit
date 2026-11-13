@@ -1,20 +1,13 @@
 source /usr/share/orbcode/gdbtrace.init
-set disassemble-next-line on
 set mem inaccessible-by-default off
+set disassemble-next-line on
 
 file fw.elf
-target ext /dev/ttygdb
-mon swd_scan
-att 1
 
-mon swo enable
-mon rtt ram 0x20000000 0x20001000
-mon rtt poll 512 16 16
-mon rtt channel 0 1
-mon rtt enable
+target ext |openocd -f .openocd
 
 enableSTM32SWO
-prepareSWO 240000000
+prepareSWO 288000000
 
 dwtSamplePC 1
 dwtSyncTap 3
