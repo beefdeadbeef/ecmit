@@ -39,6 +39,7 @@ static void worker_proc(void *arg)
 	struct netbuf *buf;
 	ip_addr_t addr;
 	uint16_t port;
+	err_t err;
 
 	if (w->conn == NULL)
 		goto out;
@@ -47,20 +48,23 @@ static void worker_proc(void *arg)
 	debugf("client: %s %d\n", ip4addr_ntoa(&addr), port);
 	tcp_nagle_disable(w->conn->pcb.tcp);
 
-	while (netconn_recv(w->conn, &buf) == ERR_OK) {
+	while ((err = netconn_recv(w->conn, &buf)) == ERR_OK) {
 		uint16_t len;
 		void *p;
 
 		do {
-			netbuf_data(buf, &p, &len);
-			netconn_write(w->conn, p, len, NETCONN_COPY);
-
+			if ((err = netbuf_data(buf, &p, &len)) != ERR_OK)
+				break;
+			if ((err = netconn_write(w->conn, p, len, NETCONN_COPY)) != ERR_OK)
+				break;
 		} while (netbuf_next(buf) >= 0);
 
 		netbuf_delete(buf);
+		if (err != ERR_OK)
+			break;
 	}
 
-	debugf("client: bye\n");
+	debugf("client: bye err: %d\n", err);
 	netconn_close(w->conn);
 	netconn_delete(w->conn);
 	w->conn = NULL;
